@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	filename := flag.String("f", "", "file to process")
+
+	filename := getFilePath()
 	showByteCount := flag.Bool("c", false, "show the number of bytes in the file")
 	showLinesCount := flag.Bool("l", false, "show the number of lines in the file")
 	showWordsCount := flag.Bool("w", false, "show the number of words in the file")
@@ -17,7 +18,7 @@ func main() {
 	byteCount, linesCount, wordsCount := -1, -1, -1
 
 	var consoleOutput string
-	data, err := getDataFromFile(*filename)
+	data, err := getDataFromFile(filename)
 	if *showByteCount {
 		byteCount = getBytesCount(data)
 		if err != nil {
@@ -42,7 +43,7 @@ func main() {
 		consoleOutput = getstring(wordsCount, consoleOutput)
 	}
 
-	consoleOutput = fmt.Sprintf("%s %s", consoleOutput, *filename)
+	consoleOutput = fmt.Sprintf("%s %s", consoleOutput, filename)
 
 	fmt.Println(consoleOutput)
 }
@@ -74,4 +75,16 @@ func getWordsCount(data []byte) int {
 	content := string(data)
 	words := strings.Split(content, " ")
 	return len(words)
+}
+
+func getFilePath() string {
+	for i := range os.Args {
+		if i == 0 {
+			continue
+		}
+		if os.Args[i][0] != '-' {
+			return os.Args[i]
+		}
+	}
+	return ""
 }
