@@ -20,27 +20,27 @@ func main() {
 	var consoleOutput string
 	data, err := getDataFromFile(filename)
 	if *showByteCount {
-		byteCount = getBytesCount(data)
+		byteCount = data.GetBytesCount()
 		if err != nil {
 			fmt.Println("Error processing file:", err)
 		}
-		consoleOutput = getstring(byteCount, consoleOutput)
+		consoleOutput = AddCounterFormat(byteCount, consoleOutput)
 	}
 
 	if *showLinesCount {
-		linesCount = getLinesCount(data)
+		linesCount = data.GetLinesCount()
 		if err != nil {
 			fmt.Println("Error processing file:", err)
 		}
-		consoleOutput = getstring(linesCount, consoleOutput)
+		consoleOutput = AddCounterFormat(linesCount, consoleOutput)
 	}
 
 	if *showWordsCount {
-		wordsCount = getWordsCount(data)
+		wordsCount = data.GetWordsCount()
 		if err != nil {
 			fmt.Println("Error processing file:", err)
 		}
-		consoleOutput = getstring(wordsCount, consoleOutput)
+		consoleOutput = AddCounterFormat(wordsCount, consoleOutput)
 	}
 
 	consoleOutput = fmt.Sprintf("%s %s", consoleOutput, filename)
@@ -48,33 +48,17 @@ func main() {
 	fmt.Println(consoleOutput)
 }
 
-func getstring(count int, a string) string {
-	return fmt.Sprintf("%s %d", a, count)
+func AddCounterFormat(count int, input string) string {
+	return fmt.Sprintf("%s %d", input, count)
 }
 
-func getDataFromFile(filename string) ([]byte, error) {
+func getDataFromFile(filename string) (fileData, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return data, err
 	}
 
 	return data, nil
-}
-
-func getBytesCount(data []byte) int {
-	return len(data)
-}
-
-func getLinesCount(data []byte) int {
-	content := string(data)
-	lines := strings.Split(content, "\n")
-	return len(lines)
-}
-
-func getWordsCount(data []byte) int {
-	content := string(data)
-	words := strings.Split(content, " ")
-	return len(words)
 }
 
 func getFilePath() string {
@@ -87,4 +71,22 @@ func getFilePath() string {
 		}
 	}
 	return ""
+}
+
+type fileData []byte
+
+func (f fileData) GetBytesCount() int {
+	return len(f)
+}
+
+func (f fileData) GetLinesCount() int {
+	content := string(f)
+	lines := strings.Split(content, "\n")
+	return len(lines)
+}
+
+func (f fileData) GetWordsCount() int {
+	content := string(f)
+	words := strings.Split(content, " ")
+	return len(words)
 }
