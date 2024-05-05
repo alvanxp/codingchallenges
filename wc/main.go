@@ -15,31 +15,25 @@ func main() {
 	showWordsCount := flag.Bool("w", false, "show the number of words in the file")
 	flag.Parse()
 
-	byteCount, linesCount, wordsCount := -1, -1, -1
+	var byteCount, linesCount, wordsCount int = 0,0,0
 
 	var consoleOutput string
 	data, err := getDataFromFile(filename)
+	if err != nil {
+		fmt.Println("Error processing file:", err)
+	}
 	if *showByteCount {
 		byteCount = data.GetBytesCount()
-		if err != nil {
-			fmt.Println("Error processing file:", err)
-		}
 		consoleOutput = AddCounterFormat(byteCount, consoleOutput)
 	}
 
 	if *showLinesCount {
 		linesCount = data.GetLinesCount()
-		if err != nil {
-			fmt.Println("Error processing file:", err)
-		}
 		consoleOutput = AddCounterFormat(linesCount, consoleOutput)
 	}
 
 	if *showWordsCount {
 		wordsCount = data.GetWordsCount()
-		if err != nil {
-			fmt.Println("Error processing file:", err)
-		}
 		consoleOutput = AddCounterFormat(wordsCount, consoleOutput)
 	}
 
