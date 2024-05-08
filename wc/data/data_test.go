@@ -6,11 +6,9 @@ import (
 )
 
 func TestGetLinesCount(t *testing.T) {
-	fileContent := []byte("Hello\nWorld\nThis\nIs\nA\nTest")
-	data := data.FileData(fileContent) // Import the missing package and use the FileData function
-	expectedLinesCount := 6
-
-	linesCount := data.GetLinesCount()
+	dataCounter := data.ProcessFileData("../test.txt", true)
+	expectedLinesCount := 7146
+	linesCount := dataCounter.GetLinesCount()
 
 	if linesCount != expectedLinesCount {
 		t.Errorf("Expected lines count: %d, but got: %d", expectedLinesCount, linesCount)
@@ -19,11 +17,10 @@ func TestGetLinesCount(t *testing.T) {
 }
 
 func TestGetWordsCount(t *testing.T) {
-	fileContent := []byte("Hello World This Is A Test")
-	data := data.FileData(fileContent) // Import the missing package and use the FileData function
-	expectedWordsCount := 6
+	dataCounter := data.ProcessFileData("../test.txt", true)
+	expectedWordsCount := 53034
 
-	wordsCount := data.GetWordsCount()
+	wordsCount := dataCounter.GetWordsCount()
 
 	if wordsCount != expectedWordsCount {
 		t.Errorf("Expected words count: %d, but got: %d", expectedWordsCount, wordsCount)
@@ -32,11 +29,10 @@ func TestGetWordsCount(t *testing.T) {
 }
 
 func TestGetCharsCount(t *testing.T) {
-	fileContent := []byte("Hello World This Is A Test")
-	data := data.FileData(fileContent) // Import the missing package and use the FileData function
-	expectedCharsCount := 26
+	dataCounter := data.ProcessFileData("../test.txt", true)
+	expectedCharsCount := 339292
 
-	charsCount := data.GetCharsCount()
+	charsCount := dataCounter.GetCharsCount()
 
 	if charsCount != expectedCharsCount {
 		t.Errorf("Expected chars count: %d, but got: %d", expectedCharsCount, charsCount)
@@ -45,11 +41,11 @@ func TestGetCharsCount(t *testing.T) {
 }
 
 func TestGetBytesCount(t *testing.T) {
-	fileContent := []byte("Hello World This Is A Test")
-	data := data.FileData(fileContent) // Import the missing package and use the FileData function
-	expectedBytesCount := 26
+	dataCount := data.ProcessFileData("../test.txt", true)
 
-	bytesCount := data.GetBytesCount()
+	expectedBytesCount := 342190
+
+	bytesCount := dataCount.GetBytesCount()
 
 	if bytesCount != expectedBytesCount {
 		t.Errorf("Expected bytes count: %d, but got: %d", expectedBytesCount, bytesCount)
