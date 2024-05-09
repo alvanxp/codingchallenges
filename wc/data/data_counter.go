@@ -34,8 +34,6 @@ func (fp *DataCounter) loadData() {
 		reader = bufio.NewReader(file)
 		fp.count(reader)
 		defer file.Close()
-		//d, err := os.ReadFile(fp.filename)
-
 		return
 	}
 	reader = bufio.NewReader(os.Stdin)

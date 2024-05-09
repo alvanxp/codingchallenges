@@ -5,18 +5,18 @@ import (
 	"fmt"
 )
 
-type Printer struct {
+type counterPrinter struct {
 	fileCounter   DataCounter
 	printerParams PrinterParams
 }
 
-func NewPrinter(printerParams PrinterParams) *Printer {
+func NewCounterPrinter(printerParams PrinterParams) *counterPrinter {
 	loadFromFile := len(flag.CommandLine.Args()) > 0
-	return &Printer{printerParams: printerParams,
+	return &counterPrinter{printerParams: printerParams,
 		fileCounter: *ProcessFileData(printerParams.FileName, loadFromFile)}
 }
 
-func (p *Printer) Print() {
+func (p *counterPrinter) Print() {
 	var byteCount, linesCount, wordsCount, charsCount int = 0, 0, 0, 0
 	var consoleOutput string
 	if !p.printerParams.ShowByteCount && !p.printerParams.ShowLinesCount && !p.printerParams.ShowWordsCount && !p.printerParams.ShowCharsCount {
@@ -52,7 +52,7 @@ func (p *Printer) Print() {
 	fmt.Println(consoleOutput)
 }
 
-func (p Printer) appendCounterFormat(count int, input string) string {
+func (p counterPrinter) appendCounterFormat(count int, input string) string {
 	return fmt.Sprintf("%s %d", input, count)
 }
 

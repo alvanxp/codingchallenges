@@ -16,7 +16,7 @@ func main() {
 	}
 
 	flag.Parse()
-	printer := data.NewPrinter(printerParams)
+	printer := data.NewCounterPrinter(printerParams)
 	printer.Print()
 
 }
