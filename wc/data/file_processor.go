@@ -3,13 +3,17 @@ package data
 import (
 	"bufio"
 	"io"
+	"log"
 	"os"
-	"strings"
+	"unicode"
 )
 
 type DataCounter struct {
 	filename     string
-	data         []byte
+	wordsCount   int
+	bytesCount   int
+	charsCount   int
+	linesCount   int
 	loadFromFile bool
 }
 
@@ -20,41 +24,61 @@ func ProcessFileData(filename string, loadFromFile bool) *DataCounter {
 }
 
 func (fp *DataCounter) loadData() {
+
+	var reader *bufio.Reader
 	if fp.loadFromFile {
-		d, err := os.ReadFile(fp.filename)
+		file, err := os.Open(fp.filename)
 		if err != nil {
 			panic("error loading file")
 		}
+		reader = bufio.NewReader(file)
+		fp.count(reader)
+		defer file.Close()
+		//d, err := os.ReadFile(fp.filename)
 
-		fp.data = d
 		return
 	}
-	reader := bufio.NewReader(os.Stdin)
-	d, err := io.ReadAll(io.Reader(reader))
-	if err != nil {
-		panic("error loading data")
+	reader = bufio.NewReader(os.Stdin)
+
+	fp.count(reader)
+}
+
+func (fp *DataCounter) count(r *bufio.Reader) {
+	var previousChar rune
+	for {
+		c, sz, err := r.ReadRune()
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				log.Fatal(err)
+			}
+		}
+		fp.bytesCount += sz
+		fp.charsCount++
+		if c == '\n' {
+			fp.linesCount++
+		}
+		if unicode.IsSpace(c) && !unicode.IsSpace(previousChar) {
+			fp.wordsCount++
+		}
+		previousChar = c
 	}
-	fp.data = d
+
 }
 
 func (fp DataCounter) GetBytesCount() int {
-	return len(fp.data)
+	return fp.bytesCount
 }
 
 func (fp DataCounter) GetCharsCount() int {
-	content := string(fp.data)
-	chars := strings.Split(content, "")
-	return len(chars)
+	return fp.charsCount
 }
 
 func (fp DataCounter) GetLinesCount() int {
-	content := string(fp.data)
-	lines := strings.Split(content, "\n")
-	return len(lines)
+	return fp.linesCount
 }
 
 func (fp DataCounter) GetWordsCount() int {
-	content := string(fp.data)
-	words := strings.Split(content, " ")
-	return len(words)
+	return fp.wordsCount
 }

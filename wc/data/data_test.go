@@ -7,7 +7,7 @@ import (
 
 func TestGetLinesCount(t *testing.T) {
 	dataCounter := data.ProcessFileData("../test.txt", true)
-	expectedLinesCount := 7146
+	expectedLinesCount := 7145
 	linesCount := dataCounter.GetLinesCount()
 
 	if linesCount != expectedLinesCount {
@@ -18,7 +18,7 @@ func TestGetLinesCount(t *testing.T) {
 
 func TestGetWordsCount(t *testing.T) {
 	dataCounter := data.ProcessFileData("../test.txt", true)
-	expectedWordsCount := 53034
+	expectedWordsCount := 58164
 
 	wordsCount := dataCounter.GetWordsCount()
 
