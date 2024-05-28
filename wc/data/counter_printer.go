@@ -7,13 +7,13 @@ import (
 
 type counterPrinter struct {
 	fileCounter   DataCounter
-	printerParams PrinterParams
+	printerParams PrintParams
 }
 
-func NewCounterPrinter(printerParams PrinterParams) *counterPrinter {
+func NewCounterPrinter(printerParams PrintParams) *counterPrinter {
 	loadFromFile := len(flag.CommandLine.Args()) > 0
 	return &counterPrinter{printerParams: printerParams,
-		fileCounter: *ProcessFileData(printerParams.FileName, loadFromFile)}
+		fileCounter: *ProcessCouting(printerParams.FileName, loadFromFile)}
 }
 
 func (p *counterPrinter) Print() {
@@ -56,7 +56,7 @@ func (p counterPrinter) appendCounterFormat(count int, input string) string {
 	return fmt.Sprintf("%s %d", input, count)
 }
 
-type PrinterParams struct {
+type PrintParams struct {
 	ShowByteCount  bool
 	ShowCharsCount bool
 	ShowLinesCount bool

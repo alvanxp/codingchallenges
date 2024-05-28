@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	printerParams := data.PrinterParams{
+	printerParams := data.PrintParams{
 		ShowByteCount:  *flag.Bool("c", false, "show the number of bytes in the file"),
 		ShowLinesCount: *flag.Bool("l", false, "show the number of lines in the file"),
 		ShowWordsCount: *flag.Bool("w", false, "show the number of words in the file"),
@@ -16,9 +16,8 @@ func main() {
 	}
 
 	flag.Parse()
-	printer := data.NewCounterPrinter(printerParams)
-	printer.Print()
-
+	countPrinter := data.NewCounterPrinter(printerParams)
+	countPrinter.Print()
 }
 
 func getFilePath() string {

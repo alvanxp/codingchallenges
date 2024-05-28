@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetLinesCount(t *testing.T) {
-	dataCounter := data.ProcessFileData("../test.txt", true)
+	dataCounter := data.ProcessCouting("../test.txt", true)
 	expectedLinesCount := 7145
 	linesCount := dataCounter.GetLinesCount()
 
@@ -17,7 +17,7 @@ func TestGetLinesCount(t *testing.T) {
 }
 
 func TestGetWordsCount(t *testing.T) {
-	dataCounter := data.ProcessFileData("../test.txt", true)
+	dataCounter := data.ProcessCouting("../test.txt", true)
 	expectedWordsCount := 58164
 
 	wordsCount := dataCounter.GetWordsCount()
@@ -29,7 +29,7 @@ func TestGetWordsCount(t *testing.T) {
 }
 
 func TestGetCharsCount(t *testing.T) {
-	dataCounter := data.ProcessFileData("../test.txt", true)
+	dataCounter := data.ProcessCouting("../test.txt", true)
 	expectedCharsCount := 339292
 
 	charsCount := dataCounter.GetCharsCount()
@@ -41,7 +41,7 @@ func TestGetCharsCount(t *testing.T) {
 }
 
 func TestGetBytesCount(t *testing.T) {
-	dataCount := data.ProcessFileData("../test.txt", true)
+	dataCount := data.ProcessCouting("../test.txt", true)
 
 	expectedBytesCount := 342190
 

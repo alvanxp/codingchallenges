@@ -17,7 +17,7 @@ type DataCounter struct {
 	loadFromFile bool
 }
 
-func ProcessFileData(filename string, loadFromFile bool) *DataCounter {
+func ProcessCouting(filename string, loadFromFile bool) *DataCounter {
 	dataCounter := &DataCounter{filename: filename, loadFromFile: loadFromFile}
 	dataCounter.loadData()
 	return dataCounter
@@ -28,12 +28,12 @@ func (fp *DataCounter) loadData() {
 	var reader *bufio.Reader
 	if fp.loadFromFile {
 		file, err := os.Open(fp.filename)
+		defer file.Close()
 		if err != nil {
 			panic("error loading file")
 		}
 		reader = bufio.NewReader(file)
 		fp.count(reader)
-		defer file.Close()
 		return
 	}
 	reader = bufio.NewReader(os.Stdin)
