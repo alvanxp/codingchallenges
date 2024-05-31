@@ -63,3 +63,7 @@ type PrintParams struct {
 	ShowWordsCount bool
 	FileName       string
 }
+
+func (p PrintParams) String() string {
+	return fmt.Sprintf("ShowByteCount: %t, ShowCharsCount: %t, ShowLinesCount: %t, ShowWordsCount: %t, FileName: %s", p.ShowByteCount, p.ShowCharsCount, p.ShowLinesCount, p.ShowWordsCount, p.FileName)
+}
