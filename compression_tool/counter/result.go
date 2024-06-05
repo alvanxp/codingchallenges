@@ -1,7 +1,7 @@
 package counter
 
 type Counter struct {
-	Counter map[rune]uint
+	Counter map[rune]int
 }
 
 func (c Counter) Print() {
@@ -11,5 +11,5 @@ func (c Counter) Print() {
 }
 
 func NewCounter() Counter {
-	return Counter{make(map[rune]uint)}
+	return Counter{make(map[rune]int)}
 }

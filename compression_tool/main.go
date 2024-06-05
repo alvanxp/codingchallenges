@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"compression/counter"
+	"compression/huffman"
+	"fmt"
 	"os"
 )
 
@@ -16,7 +18,14 @@ func main() {
 	var reader *bufio.Reader
 	reader = bufio.NewReader(f)
 	c := count(reader)
-	c.Print()
+	root := huffman.BuildTree(c.Counter)
+	codes := make(map[rune]string)
+	huffman.Traverse(root, "", codes)
+
+	fmt.Println("Huffman Codes:")
+	for ch, code := range codes {
+		fmt.Printf("%c: %s\n", ch, code)
+	}
 }
 
 func count(r *bufio.Reader) counter.Counter {
@@ -39,4 +48,3 @@ func getFilePath() string {
 	}
 	return ""
 }
-
