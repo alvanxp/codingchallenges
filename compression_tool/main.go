@@ -15,8 +15,7 @@ func main() {
 		panic(err)
 	}
 	defer f.Close()
-	var reader *bufio.Reader
-	reader = bufio.NewReader(f)
+	reader := bufio.NewReader(f)
 	c := count(reader)
 	root := huffman.BuildTree(c.Counter)
 	codes := make(map[rune]string)
