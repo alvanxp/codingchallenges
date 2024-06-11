@@ -4,10 +4,10 @@ import "container/heap"
 
 // Node represents a node in the Huffman tree.
 type Node struct {
-	Freq  int  // Frequency of the symbol
-	Ch    rune // The symbol itself (can be extended for wider characters)
 	Left  *Node
 	Right *Node
+	Freq  int
+	Ch    rune
 }
 
 // ByFreq implements the heap.Interface for building the priority queue.
