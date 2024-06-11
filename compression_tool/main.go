@@ -34,7 +34,9 @@ func count(r *bufio.Reader) counter.Counter {
 		if err != nil {
 			break
 		}
-		c.Counter[rc]++
+		if rc != ' ' {
+			c.Counter[rc]++
+		}
 	}
 	return c
 }
