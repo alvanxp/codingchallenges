@@ -4,27 +4,88 @@ import (
 	"bufio"
 	"compression/counter"
 	"compression/huffman"
-	"fmt"
+	"errors"
+	"flag"
 	"os"
 )
 
 func main() {
-	fileName := getFilePath()
-	f, err := os.Open(fileName)
+	filePath := getFilePath()
+	if filePath == "" {
+		reader, err := getReaderToCompress(filePath)
+		if err != nil {
+			panic(err)
+		}
+		c := count(reader)
+		root := huffman.BuildTree(c.Counter)
+		codes := make(map[rune]string)
+		huffman.Traverse(root, "", codes)
+	}
+	var outputFileName string
+	flag.StringVar(&outputFileName, "o", "example.txt", "output file name")
+
+	var fileToDecompress string
+	flag.StringVar(&fileToDecompress, "d", "example.txt", "input file name")
+	flag.Parse()
+	// fmt.Println("Huffman Codes:")
+	// for ch, code := range codes {
+	// 	fmt.Printf("%c: %s\n", ch, code)
+	// }
+}
+
+type CompressParams struct {
+	FilePath string
+}
+
+type OperationType int
+
+const (
+	Zip OperationType = iota
+	Unzip
+)
+
+func getReaderToCompress(filePath string) (*bufio.Reader, error) {
+	if filePath == "" {
+		return nil, errors.New("file path is empty")
+	}
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return bufio.NewReader(f), nil
+}
+
+func writeToFile(fileName string, c counter.Counter, codes map[rune]string) {
+	f, err := os.Create(fileName)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
-	reader := bufio.NewReader(f)
-	c := count(reader)
-	root := huffman.BuildTree(c.Counter)
-	codes := make(map[rune]string)
-	huffman.Traverse(root, "", codes)
+	w := bufio.NewWriter(f)
+	writeHeader(w, c)
+	writeCodes(w, codes)
+	w.Flush()
+}
 
-	fmt.Println("Huffman Codes:")
+func writeCodes(w *bufio.Writer, codes map[rune]string) {
 	for ch, code := range codes {
-		fmt.Printf("%c: %s\n", ch, code)
+		w.WriteRune(ch)
+		w.WriteRune(' ')
+		w.WriteString(code)
+		w.WriteRune('\n')
 	}
+}
+
+func writeHeader(w *bufio.Writer, c counter.Counter) {
+	for ch, freq := range c.Counter {
+		w.WriteRune(ch)
+		w.WriteRune(' ')
+		w.WriteRune(rune(freq))
+		w.WriteRune('\n')
+	}
+	w.WriteRune('\n')
 }
 
 func count(r *bufio.Reader) counter.Counter {
