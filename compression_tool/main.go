@@ -34,7 +34,8 @@ func main() {
 }
 
 type CompressParams struct {
-	FilePath string
+	FilePath  string
+	Operation OperationType
 }
 
 type OperationType int
@@ -43,6 +44,24 @@ const (
 	Zip OperationType = iota
 	Unzip
 )
+
+func Process(compressParams CompressParams) error {
+	switch compressParams.Operation {
+	case Zip:
+		reader, err := getReaderToCompress(compressParams.FilePath)
+		if err != nil {
+			return err
+		}
+		c := count(reader)
+		root := huffman.BuildTree(c.Counter)
+		codes := make(map[rune]string)
+		huffman.Traverse(root, "", codes)
+		writeToFile("example.txt", c, codes)
+	case Unzip:
+		panic("Not implemented")
+	}
+	return nil
+}
 
 func getReaderToCompress(filePath string) (*bufio.Reader, error) {
 	if filePath == "" {
