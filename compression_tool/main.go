@@ -12,16 +12,6 @@ import (
 
 func main() {
 	filePath := getFilePath()
-	// if filePath == "" {
-	// 	reader, err := getReaderToCompress(filePath)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	c := count(reader)
-	// 	root := huffman.BuildTree(c.Counter)
-	// 	codes := make(map[rune]string)
-	// 	huffman.Traverse(root, "", codes)
-	// }
 	fmt.Println(filePath)
 	var outputFileName string
 	flag.StringVar(&outputFileName, "o", "example.txt", "output file name")
@@ -32,11 +22,6 @@ func main() {
 
 	fmt.Println(outputFileName)
 	Process(CompressParams{FilePath: filePath, OutputPath: outputFileName, Operation: Zip})
-
-	// fmt.Println("Huffman Codes:")
-	// for ch, code := range codes {
-	// 	fmt.Printf("%c: %s\n", ch, code)
-	// }
 }
 
 type CompressParams struct {
@@ -64,7 +49,12 @@ func Process(compressParams CompressParams) error {
 		root := huffman.BuildTree(c.Counter)
 		codes := make(map[rune]string)
 		huffman.Traverse(root, "", codes)
-		writeToFile(compressParams.OutputPath, c, codes)
+		reader, err = getReaderToCompress(compressParams.FilePath)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			return err
+		}
+		writeToFile(compressParams.OutputPath, c, codes, reader)
 	case Unzip:
 		panic("Not implemented")
 	}
@@ -84,8 +74,8 @@ func getReaderToCompress(filePath string) (*bufio.Reader, error) {
 	return bufio.NewReader(f), nil
 }
 
-func writeToFile(fileName string, c counter.Counter, codes map[rune]string) {
-	fmt.Println(fileName)
+func writeToFile(fileName string, c counter.Counter, codes map[rune]string, r *bufio.Reader) {
+	// fmt.Println(fileName)
 	f, err := os.Create(fileName)
 	if err != nil {
 		panic(err)
@@ -93,9 +83,24 @@ func writeToFile(fileName string, c counter.Counter, codes map[rune]string) {
 	defer f.Close()
 	w := bufio.NewWriter(f)
 	// writeHeader(w, c)
-	w.WriteString("some text")
-	// writeCodes(w, codes)
+	// w.WriteString("some text")
+	writeCodes(w, codes)
+	w.WriteString("ENDHEADER\n")
+	writeContent(w, r, codes)
 	w.Flush()
+}
+
+func writeContent(w *bufio.Writer, r *bufio.Reader, codes map[rune]string) {
+	for {
+		rc, _, err := r.ReadRune()
+		if err != nil {
+			break
+		}
+		fmt.Println(rc)
+		if rc != ' ' {
+			w.WriteString(codes[rc])
+		}
+	}
 }
 
 func writeCodes(w *bufio.Writer, codes map[rune]string) {
