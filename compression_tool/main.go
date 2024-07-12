@@ -14,29 +14,35 @@ func main() {
 	filePath := getFilePath()
 	fmt.Println(filePath)
 	var outputFileName string
-	flag.StringVar(&outputFileName, "o", "example.txt", "output file name")
-
+	//flag.StringVar(&outputFileName, "o", "example.txt", "output file name")
+	outputFileName = "compress.compressed"
 	var fileToDecompress string
 	flag.StringVar(&fileToDecompress, "d", "example.txt", "input file name")
 	flag.Parse()
+	filePath = "135-0.txt"
 
 	fmt.Println(outputFileName)
 	Process(CompressParams{FilePath: filePath, OutputPath: outputFileName, Operation: Zip})
 }
 
+// CompressParams represents the parameters for compression.
 type CompressParams struct {
 	FilePath   string
 	OutputPath string
 	Operation  OperationType
 }
 
+// OperationType represents the type for compression operations.
 type OperationType int
 
 const (
+	// Zip represents the operation type for compression.
 	Zip OperationType = iota
+	// Unzip represents the operation type for decompression.
 	Unzip
 )
 
+// Process compresses or decompresses a file based on the provided parameters.
 func Process(compressParams CompressParams) error {
 	switch compressParams.Operation {
 	case Zip:
@@ -86,19 +92,37 @@ func writeToFile(fileName string, c counter.Counter, codes map[rune]string, r *b
 	// w.WriteString("some text")
 	writeCodes(w, codes)
 	w.WriteString("ENDHEADER\n")
-	writeContent(w, r, codes)
+	//writeContent(w, r, codes)
 	w.Flush()
 }
 
 func writeContent(w *bufio.Writer, r *bufio.Reader, codes map[rune]string) {
+
+	temp := byte(0)
+	i := 0
 	for {
 		rc, _, err := r.ReadRune()
 		if err != nil {
 			break
 		}
-		fmt.Println(rc)
+		// fmt.Println(rc)
 		if rc != ' ' {
-			w.WriteString(codes[rc])
+			for _, c := range codes[rc] {
+
+				if c == '1' {
+					//add a bit to the left of the byte
+					temp = temp | 1<<uint(7-i)
+				} else {
+					//add a bit to the right of the byte
+					temp = temp | 0<<uint(7-i)
+				}
+				i = i + 1
+				if i == 8 {
+					w.WriteByte(temp)
+					temp = 0
+					i = 0
+				}
+			}
 		}
 	}
 }

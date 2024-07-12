@@ -21,7 +21,6 @@ func TestGetWordsCount(t *testing.T) {
 	expectedWordsCount := 58164
 
 	wordsCount := dataCounter.GetWordsCount()
-
 	if wordsCount != expectedWordsCount {
 		t.Errorf("Expected words count: %d, but got: %d", expectedWordsCount, wordsCount)
 	}
