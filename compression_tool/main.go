@@ -7,7 +7,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -79,12 +81,15 @@ func Process(compressParams CompressParams) error {
 
 func decompress(filePath string) {
 	header := loadHeader(filePath)
+	// fmt.Println(header)
 	bits := ""
 	f, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
 	}
 	r := bufio.NewReader(f)
+
+	var outputTxtBuilder strings.Builder = strings.Builder{}
 	for {
 		b, err := r.ReadByte()
 		if err != nil {
@@ -94,13 +99,21 @@ func decompress(filePath string) {
 			bit := (b >> uint(7-i)) & 1
 			bits = bits + fmt.Sprintf("%d", bit)
 			if ch, ok := header[bits]; ok {
-				if ch != 239 {
-					fmt.Print(string(ch))
-				}
+				outputTxtBuilder.WriteString(string(ch))
 				bits = ""
 			}
 		}
 	}
+	outputFileName := "output2.txt"
+	//write to file
+	outputTxt := outputTxtBuilder.String()
+	e := os.WriteFile(outputFileName, []byte(outputTxt), fs.FileMode(0644))
+
+	if e != nil {
+		fmt.Println("Error writing to file: ", e)
+		panic(e)
+	}
+	fmt.Println("Output written to file: ", outputFileName)
 }
 
 func loadHeader(filePath string) map[string]rune {
@@ -117,25 +130,29 @@ func loadHeader(filePath string) map[string]rune {
 		if err != nil {
 			break
 		}
-		l := strings.Trim(string(line), " ")
-		fmt.Println(l)
+		l := string(line)
+		if l == "" {
+			continue
+		}
 		v := strings.Split(l, ":")
-		if len(v) > 1 {
-			code := v[0]
+		if len(v) == 1 {
+			fmt.Println(v[0])
 			ch := '\n'
+			code := string(v[0])
 			codes[code] = ch
 			continue
 		}
-		if len(v) > 2 {
-			ch := ' '
-			code := string(v[2])
-			codes[code] = ch
+		if len(v[1]) == 0 {
+			codes[v[0]] = '\n'
 			continue
 		}
-
-		ch := rune(v[0][0])
-		code := string(v[1])
-		codes[code] = ch
+		code := string(v[0])
+		ch := v[1]
+		i, err := strconv.Atoi(ch)
+		if err != nil {
+			panic(err)
+		}
+		codes[code] = rune(i)
 	}
 	return codes
 }
@@ -209,7 +226,7 @@ func writeCodes(w *bufio.Writer, codes map[rune]string) {
 		if ch != '\n' {
 			w.WriteString(code)
 			w.WriteRune(':')
-			w.WriteRune(ch)
+			w.WriteString(fmt.Sprintf("%v", ch))
 			w.WriteRune('\n')
 		}
 	}
