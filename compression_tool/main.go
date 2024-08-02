@@ -58,21 +58,26 @@ const (
 func Process(compressParams CompressParams) error {
 	switch compressParams.Operation {
 	case Zip:
-		reader, err := getReaderToCompress(compressParams.FilePath)
+		f, err := os.Open(compressParams.FilePath)
 		if err != nil {
-			fmt.Println("Error: ", err)
+			fmt.Println("Error opening file: ", err)
 			return err
 		}
+		defer func() {
+			fmt.Println("Closing file")
+			if f != nil {
+				f.Close()
+			}
+		}()
+		reader := bufio.NewReader(f)
+
+		fmt.Println("reader file size: ", reader.Buffered())
 		c := count(reader)
 		root := huffman.BuildTree(c.Counter)
 		codes := make(map[rune]string)
 		huffman.Traverse(root, "", codes)
-		reader, err = getReaderToCompress(compressParams.FilePath)
-		if err != nil {
-			fmt.Println("Error: ", err)
-			return err
-		}
-		writeToFile(compressParams.OutputPath, c, codes, reader)
+		fmt.Println("Writing to file: ", compressParams.OutputPath)
+		writeToFile(compressParams.OutputPath, codes, reader)
 	case Unzip:
 		decompress(compressParams.FilePath)
 	}
@@ -167,10 +172,12 @@ func getReaderToCompress(filePath string) (*bufio.Reader, error) {
 		return nil, err
 	}
 
+	defer f.Close()
 	return bufio.NewReader(f), nil
 }
 
-func writeToFile(fileName string, c counter.Counter, codes map[rune]string, r *bufio.Reader) {
+func writeToFile(fileName string, codes map[rune]string, r *bufio.Reader) {
+	fmt.Println("reader file size: ", r.Size())
 	f, err := os.Create(fileName)
 	if err != nil {
 		panic(err)
