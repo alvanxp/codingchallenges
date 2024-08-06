@@ -1,7 +1,8 @@
 package counter
 
 type Counter struct {
-	Counter map[rune]int
+	Counter   map[rune]int
+	CharCount int
 }
 
 func (c Counter) Print() {
@@ -11,5 +12,8 @@ func (c Counter) Print() {
 }
 
 func NewCounter() Counter {
-	return Counter{make(map[rune]int)}
+	return Counter{
+		Counter:   make(map[rune]int),
+		CharCount: 0,
+	}
 }
