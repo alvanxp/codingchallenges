@@ -92,18 +92,13 @@ func decompress(filePath string) {
 	r := bufio.NewReader(f)
 
 	var outputTxtBuilder strings.Builder = strings.Builder{}
-	headerLength := 0
-	headerLengthBuffer := make([]byte, 4)
-	r.Read(headerLengthBuffer)
-	headerLength = int(binary.LittleEndian.Uint32(headerLengthBuffer))
-	fmt.Println("Header length: ", headerLength)
+	headerLength := ReadNextInt(r)
+
 	headerBuffer := make([]byte, headerLength)
 	r.Read(headerBuffer)
-	charCounterBuffer:=make([]byte, 4)
-	r.Read(charCounterBuffer)
-	charCounter:=int(binary.LittleEndian.Uint32(charCounterBuffer))
-	fmt.Println("Header Buffer length: ", len(headerBuffer))
-	fmt.Println("Header Buffer: ", headerBuffer)
+
+	charCounter := ReadNextInt(r)
+
 	header := loadHeader(headerBuffer)
 	if header == nil {
 		fmt.Println("Error loading header")
@@ -131,7 +126,6 @@ func decompress(filePath string) {
 		}
 	}
 	outputFileName := "output2.txt"
-	//write to file
 	outputTxt := outputTxtBuilder.String()
 	e := os.WriteFile(outputFileName, []byte(outputTxt), fs.FileMode(0644))
 
@@ -140,6 +134,14 @@ func decompress(filePath string) {
 		panic(e)
 	}
 	fmt.Println("Output written to file: ", outputFileName)
+}
+
+func ReadNextInt(r *bufio.Reader) int {
+	result := 0
+	headerLengthBuffer := make([]byte, 4)
+	r.Read(headerLengthBuffer)
+	result = int(binary.LittleEndian.Uint32(headerLengthBuffer))
+	return result
 }
 
 func loadHeader(headerBuffer []byte) map[string]rune {
@@ -199,12 +201,17 @@ func writeToFile(fileName string, codes map[rune]string, counter counter.Counter
 		panic(err)
 	}
 	writeCodes(w, codes)
-	sb:=make([]byte, 4)
-	binary.LittleEndian.PutUint32(sb, uint32(counter.CharCount))
-	w.Write(sb)
+	chartCountBuffer := ConvertIntToBytes(counter.CharCount)
+	w.Write(chartCountBuffer)
 	w.WriteByte(byte(counter.CharCount))
 	writeContent(w, r, codes)
 	w.Flush()
+}
+
+func ConvertIntToBytes(input int) []byte {
+	sb := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sb, uint32(input))
+	return sb
 }
 
 func writeContent(w *bufio.Writer, r *bufio.Reader, codes map[rune]string) {
