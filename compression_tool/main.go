@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compression/counter"
 	"compression/huffman"
+	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
@@ -66,6 +67,10 @@ func Process(compressParams CompressParams) error {
 		root := huffman.BuildTree(c.Counter)
 		codes := make(map[rune]string)
 		huffman.Traverse(root, "", codes)
+		//print codes
+		for ch, code := range codes {
+			fmt.Printf("%c: %s\n", ch, code)
+		}
 		reader, err = getReaderToCompress(compressParams.FilePath)
 		if err != nil {
 			return err
@@ -88,24 +93,30 @@ func decompress(filePath string) {
 
 	var outputTxtBuilder strings.Builder = strings.Builder{}
 	headerLength := 0
-	var headerBuffer []byte
-	b, _ := r.ReadByte()
-	headerLength = int(b)
-	headerBuffer = make([]byte, headerLength)
+	headerLengthBuffer := make([]byte, 4)
+	r.Read(headerLengthBuffer)
+	headerLength = int(binary.LittleEndian.Uint32(headerLengthBuffer))
+	fmt.Println("Header length: ", headerLength)
+	headerBuffer := make([]byte, headerLength)
 	r.Read(headerBuffer)
+	charCounterBuffer:=make([]byte, 4)
+	r.Read(charCounterBuffer)
+	charCounter:=int(binary.LittleEndian.Uint32(charCounterBuffer))
+	fmt.Println("Header Buffer length: ", len(headerBuffer))
+	fmt.Println("Header Buffer: ", headerBuffer)
 	header := loadHeader(headerBuffer)
 	if header == nil {
 		fmt.Println("Error loading header")
 		return
 	}
 
-	b, _ = r.ReadByte()
-	charCount := int(b)
-	fmt.Println("Char count: ", charCount)
 	c := 0
 	for {
 		b, err := r.ReadByte()
 		if err != nil {
+			break
+		}
+		if c == charCounter {
 			break
 		}
 
@@ -133,7 +144,7 @@ func decompress(filePath string) {
 
 func loadHeader(headerBuffer []byte) map[string]rune {
 	cont := string(headerBuffer)
-	fmt.Println("Header: ", cont)
+	fmt.Println("Header: \n", cont)
 	sc := strings.Split(cont, "\n")
 	codes := make(map[string]rune)
 	for _, l := range sc {
@@ -188,6 +199,9 @@ func writeToFile(fileName string, codes map[rune]string, counter counter.Counter
 		panic(err)
 	}
 	writeCodes(w, codes)
+	sb:=make([]byte, 4)
+	binary.LittleEndian.PutUint32(sb, uint32(counter.CharCount))
+	w.Write(sb)
 	w.WriteByte(byte(counter.CharCount))
 	writeContent(w, r, codes)
 	w.Flush()
@@ -238,7 +252,13 @@ func writeCodes(w *bufio.Writer, codes map[rune]string) {
 	code := codes['\n']
 	sb.WriteString(code)
 	sb.WriteRune('\n')
-	w.WriteByte(byte(sb.Len()))
+	x := sb.Len()
+	//convert x to bytes and write to file
+	bs := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bs, uint32(x))
+
+	w.Write(bs)
+	fmt.Println("Header length: ", x)
 	w.WriteString(sb.String())
 }
 
