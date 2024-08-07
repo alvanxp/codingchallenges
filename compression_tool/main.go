@@ -110,7 +110,7 @@ func decompress(filePath string) {
 			bit := (b >> uint(7-i)) & 1
 			bits = bits + fmt.Sprintf("%d", bit)
 			if ch, ok := header[bits]; ok {
-				outputTxtBuilder.WriteString(string(ch))
+				outputTxtBuilder.WriteRune(ch)
 				bits = ""
 				charCouting++
 			}
@@ -136,33 +136,32 @@ func ReadNextInt(r *bufio.Reader) int {
 }
 
 func loadHeader(headerBuffer []byte) map[string]rune {
-	cont := string(headerBuffer)
-	fmt.Println("Header: \n", cont)
-	sc := strings.Split(cont, "\n")
+	header := ""
+	if len(headerBuffer) > 0 {
+		header = string(headerBuffer)
+	} else {
+		panic("Header is empty")
+	}
+
+	headerLines := strings.Split(header, "\n")
 	codes := make(map[string]rune)
-	for _, l := range sc {
+	for _, l := range headerLines {
 		if l == "" {
 			continue
 		}
 		v := strings.Split(l, ":")
-		if len(v) == 1 {
-			fmt.Println(v[0])
-			ch := '\n'
-			code := string(v[0])
-			codes[code] = ch
+		if len(v) != 2 {
+			fmt.Println("Invalid header line:", l)
 			continue
 		}
-		if len(v[1]) == 0 {
-			codes[v[0]] = '\n'
-			continue
-		}
-		code := string(v[0])
-		ch := v[1]
-		i, err := strconv.Atoi(ch)
+		code := strings.TrimSpace(v[0])
+		ch := strings.TrimSpace(v[1])
+		inputNumber, err := strconv.Atoi(ch)
 		if err != nil {
-			panic(err)
+			fmt.Println("Invalid character code:", ch)
+			continue
 		}
-		codes[code] = rune(i)
+		codes[code] = rune(inputNumber)
 	}
 	return codes
 }
@@ -199,8 +198,8 @@ func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune
 	defer f.Close()
 	r := bufio.NewReader(f)
 
-	temp := byte(0)
-	i := 0
+	byteBuffer := byte(0)
+	bitIndex := 0
 	for {
 		rc, _, err := r.ReadRune()
 		if err != nil {
@@ -211,22 +210,22 @@ func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune
 
 			if c == '1' {
 				//add a bit to the left of the byte
-				temp = temp | 1<<uint(7-i)
+				byteBuffer = byteBuffer | 1<<uint(7-bitIndex)
 			} else {
 				//add a bit to the right of the byte
-				temp = temp | 0<<uint(7-i)
+				byteBuffer = byteBuffer | 0<<uint(7-bitIndex)
 			}
-			i = i + 1
-			if i == 8 {
-				w.WriteByte(temp)
-				temp = 0
-				i = 0
+			bitIndex = bitIndex + 1
+			if bitIndex == 8 {
+				w.WriteByte(byteBuffer)
+				byteBuffer = 0
+				bitIndex = 0
 			}
 		}
 	}
-	w.WriteByte(temp)
-	temp = 0
-	i = 0
+	w.WriteByte(byteBuffer)
+	byteBuffer = 0
+	bitIndex = 0
 }
 
 func writeCodes(w *bufio.Writer, codes map[rune]string) {
@@ -269,16 +268,4 @@ func count(compressParams CompressParams) counter.Counter {
 
 	c.CharCount = charCounter
 	return c
-}
-
-func getFilePath() string {
-	args := os.Args[1:]
-	if len(args) > 0 {
-		path := args[len(args)-1]
-		fmt.Println(path)
-		return path
-	} else {
-		fmt.Println("No path provided")
-	}
-	return ""
 }
