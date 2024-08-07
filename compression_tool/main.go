@@ -136,32 +136,33 @@ func ReadNextInt(r *bufio.Reader) int {
 }
 
 func loadHeader(headerBuffer []byte) map[string]rune {
-	header := ""
-	if len(headerBuffer) > 0 {
-		header = string(headerBuffer)
-	} else {
-		panic("Header is empty")
-	}
-
-	headerLines := strings.Split(header, "\n")
+	cont := string(headerBuffer)
+	fmt.Println("Header: \n", cont)
+	sc := strings.Split(cont, "\n")
 	codes := make(map[string]rune)
-	for _, l := range headerLines {
+	for _, l := range sc {
 		if l == "" {
 			continue
 		}
 		v := strings.Split(l, ":")
-		if len(v) != 2 {
-			fmt.Println("Invalid header line:", l)
+		if len(v) == 1 {
+			fmt.Println(v[0])
+			ch := '\n'
+			code := string(v[0])
+			codes[code] = ch
 			continue
 		}
-		code := strings.TrimSpace(v[0])
-		ch := strings.TrimSpace(v[1])
-		inputNumber, err := strconv.Atoi(ch)
+		if len(v[1]) == 0 {
+			codes[v[0]] = '\n'
+			continue
+		}
+		code := string(v[0])
+		ch := v[1]
+		i, err := strconv.Atoi(ch)
 		if err != nil {
-			fmt.Println("Invalid character code:", ch)
-			continue
+			panic(err)
 		}
-		codes[code] = rune(inputNumber)
+		codes[code] = rune(i)
 	}
 	return codes
 }
