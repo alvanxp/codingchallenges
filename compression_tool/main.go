@@ -5,7 +5,6 @@ import (
 	"compression/counter"
 	"compression/huffman"
 	"encoding/binary"
-	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -59,11 +58,7 @@ const (
 func Process(compressParams CompressParams) error {
 	switch compressParams.Operation {
 	case Zip:
-		reader, err := getReaderToCompress(compressParams.FilePath)
-		if err != nil {
-			return err
-		}
-		c := count(reader)
+		c := count(compressParams)
 		root := huffman.BuildTree(c.Counter)
 		codes := make(map[rune]string)
 		huffman.Traverse(root, "", codes)
@@ -71,12 +66,8 @@ func Process(compressParams CompressParams) error {
 		for ch, code := range codes {
 			fmt.Printf("%c: %s\n", ch, code)
 		}
-		reader, err = getReaderToCompress(compressParams.FilePath)
-		if err != nil {
-			return err
-		}
 
-		writeToFile(compressParams.OutputPath, codes, c, reader)
+		writeToFile(compressParams, codes, c)
 	case Unzip:
 		decompress(compressParams.FilePath)
 	}
@@ -97,7 +88,7 @@ func decompress(filePath string) {
 	headerBuffer := make([]byte, headerLength)
 	r.Read(headerBuffer)
 
-	charCounter := ReadNextInt(r)
+	totalChars := ReadNextInt(r)
 
 	header := loadHeader(headerBuffer)
 	if header == nil {
@@ -105,13 +96,13 @@ func decompress(filePath string) {
 		return
 	}
 
-	c := 0
+	charCouting := 0
 	for {
 		b, err := r.ReadByte()
 		if err != nil {
 			break
 		}
-		if c == charCounter {
+		if charCouting == totalChars {
 			break
 		}
 
@@ -121,7 +112,7 @@ func decompress(filePath string) {
 			if ch, ok := header[bits]; ok {
 				outputTxtBuilder.WriteString(string(ch))
 				bits = ""
-				c++
+				charCouting++
 			}
 		}
 	}
@@ -176,22 +167,8 @@ func loadHeader(headerBuffer []byte) map[string]rune {
 	return codes
 }
 
-func getReaderToCompress(filePath string) (*bufio.Reader, error) {
-	if filePath == "" {
-		return nil, errors.New("file path is empty")
-	}
-
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	// defer f.Close()
-	return bufio.NewReader(f), nil
-}
-
-func writeToFile(fileName string, codes map[rune]string, counter counter.Counter, r *bufio.Reader) {
-	f, err := os.Create(fileName)
+func writeToFile(compressParams CompressParams, codes map[rune]string, counter counter.Counter) {
+	f, err := os.Create(compressParams.OutputPath)
 	if err != nil {
 		panic(err)
 	}
@@ -203,8 +180,7 @@ func writeToFile(fileName string, codes map[rune]string, counter counter.Counter
 	writeCodes(w, codes)
 	chartCountBuffer := ConvertIntToBytes(counter.CharCount)
 	w.Write(chartCountBuffer)
-	w.WriteByte(byte(counter.CharCount))
-	writeContent(w, r, codes)
+	writeContent(w, compressParams, codes)
 	w.Flush()
 }
 
@@ -214,7 +190,14 @@ func ConvertIntToBytes(input int) []byte {
 	return sb
 }
 
-func writeContent(w *bufio.Writer, r *bufio.Reader, codes map[rune]string) {
+func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune]string) {
+
+	f, err := os.Open(compressParams.FilePath)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	r := bufio.NewReader(f)
 
 	temp := byte(0)
 	i := 0
@@ -259,27 +242,20 @@ func writeCodes(w *bufio.Writer, codes map[rune]string) {
 	code := codes['\n']
 	sb.WriteString(code)
 	sb.WriteRune('\n')
-	x := sb.Len()
-	//convert x to bytes and write to file
+	count := sb.Len()
 	bs := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bs, uint32(x))
-
+	binary.LittleEndian.PutUint32(bs, uint32(count))
 	w.Write(bs)
-	fmt.Println("Header length: ", x)
 	w.WriteString(sb.String())
 }
 
-// func writeHeader(w *bufio.Writer, c counter.Counter) {
-// 	for ch, freq := range c.Counter {
-// 		w.WriteRune(ch)
-// 		w.WriteRune(' ')
-// 		w.WriteRune(rune(freq))
-// 		w.WriteRune('\n')
-// 	}
-// 	w.WriteRune('\n')
-// }
-
-func count(r *bufio.Reader) counter.Counter {
+func count(compressParams CompressParams) counter.Counter {
+	f, err := os.Open(compressParams.FilePath)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	r := bufio.NewReader(f)
 	c := counter.NewCounter()
 	charCounter := 0
 	for {
@@ -287,10 +263,8 @@ func count(r *bufio.Reader) counter.Counter {
 		if err != nil {
 			break
 		}
-		// if rc != ' ' {
 		c.Counter[rc]++
 		charCounter++
-		// }
 	}
 
 	c.CharCount = charCounter
