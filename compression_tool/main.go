@@ -5,6 +5,7 @@ import (
 	"compression/counter"
 	"compression/huffman"
 	"encoding/binary"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -33,7 +34,10 @@ func main() {
 		operation = Zip
 	}
 
-	Process(CompressParams{FilePath: filePath, OutputPath: outputFileName, Operation: operation})
+	err := Process(CompressParams{FilePath: filePath, OutputPath: outputFileName, Operation: operation})
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 // CompressParams represents the parameters for compression.
@@ -55,28 +59,36 @@ const (
 
 // Process compresses or decompresses a file based on the provided parameters.
 func Process(compressParams CompressParams) error {
+	var err error
 	switch compressParams.Operation {
 	case Zip:
-		compress(compressParams)
+		err = compress(compressParams)
 	case Unzip:
-		decompress(compressParams.FilePath, compressParams.OutputPath)
+		err = decompress(compressParams.FilePath, compressParams.OutputPath)
+	}
+	return err
+}
+
+func compress(compressParams CompressParams) error {
+	c, err := count(compressParams)
+	if err != nil {
+		return err
+	}
+	root := huffman.BuildTree(c.Counter)
+	codes := make(map[rune]string)
+	huffman.Traverse(root, "", codes)
+	err = writeToFile(compressParams, codes, c)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-func compress(compressParams CompressParams) {
-	c := count(compressParams)
-	root := huffman.BuildTree(c.Counter)
-	codes := make(map[rune]string)
-	huffman.Traverse(root, "", codes)
-	writeToFile(compressParams, codes, c)
-}
-
-func decompress(filePath string, outputFileName string) {
+func decompress(filePath string, outputFileName string) error {
 	bits := ""
 	f, err := os.Open(filePath)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer f.Close()
 
@@ -85,8 +97,7 @@ func decompress(filePath string, outputFileName string) {
 	// Open the output file for writing
 	outputFile, err := os.Create(outputFileName)
 	if err != nil {
-		fmt.Println("Error creating output file:", err)
-		panic(err)
+		return err
 	}
 	defer outputFile.Close()
 
@@ -97,10 +108,9 @@ func decompress(filePath string, outputFileName string) {
 
 	totalChars := readNextInt(r)
 
-	header := loadHeader(headerBuffer)
-	if header == nil {
-		fmt.Println("Error loading header")
-		return
+	header, err := loadHeader(headerBuffer)
+	if err != nil {
+		return err
 	}
 
 	// Buffer to accumulate the decompressed data before writing it to the file
@@ -129,8 +139,7 @@ func decompress(filePath string, outputFileName string) {
 				if chunkBuilder.Len() >= chunkSize {
 					_, err := outputFile.WriteString(chunkBuilder.String())
 					if err != nil {
-						fmt.Println("Error writing to file:", err)
-						panic(err)
+						return err
 					}
 					chunkBuilder.Reset()
 				}
@@ -142,12 +151,12 @@ func decompress(filePath string, outputFileName string) {
 	if chunkBuilder.Len() > 0 {
 		_, err := outputFile.WriteString(chunkBuilder.String())
 		if err != nil {
-			fmt.Println("Error writing to file:", err)
-			panic(err)
+			return err
 		}
 	}
 
 	fmt.Println("Decompression complete. Output written to", outputFileName)
+	return nil
 }
 
 func readNextInt(r *bufio.Reader) int {
@@ -158,7 +167,7 @@ func readNextInt(r *bufio.Reader) int {
 	return result
 }
 
-func loadHeader(headerBuffer []byte) map[string]rune {
+func loadHeader(headerBuffer []byte) (map[string]rune, error) {
 	headerContent := string(headerBuffer)
 	headerLines := strings.Split(headerContent, "|")
 	codes := make(map[string]rune)
@@ -167,29 +176,45 @@ func loadHeader(headerBuffer []byte) map[string]rune {
 			continue
 		}
 		lineValues := strings.Split(line, ":")
+		if len(lineValues) != 2 {
+			return nil, errors.New("invalid header line")
+		}
 		code := string(lineValues[0])
 		ch := lineValues[1]
 		i, err := strconv.Atoi(ch)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		codes[code] = rune(i)
 	}
-	return codes
+	return codes, nil
 }
 
-func writeToFile(compressParams CompressParams, codes map[rune]string, counter counter.Counter) {
+func writeToFile(compressParams CompressParams, codes map[rune]string, counter counter.Counter) error {
 	f, err := os.Create(compressParams.OutputPath)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer f.Close()
 	w := bufio.NewWriter(f)
-	writeCodes(w, codes)
+	err = writeCodes(w, codes)
+	if err != nil {
+		return err
+	}
 	chartCountBuffer := convertIntToBytes(counter.TotalChars)
-	w.Write(chartCountBuffer)
-	writeContent(w, compressParams, codes)
-	w.Flush()
+	_, err = w.Write(chartCountBuffer)
+	if err != nil {
+		return err
+	}
+	err = writeContent(w, compressParams, codes)
+	if err != nil {
+		return err
+	}
+	err = w.Flush()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func convertIntToBytes(input int) []byte {
@@ -198,11 +223,11 @@ func convertIntToBytes(input int) []byte {
 	return sb
 }
 
-func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune]string) {
+func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune]string) error {
 
 	f, err := os.Open(compressParams.FilePath)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer f.Close()
 	r := bufio.NewReader(f)
@@ -234,9 +259,10 @@ func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune
 	w.WriteByte(byteBuffer)
 	byteBuffer = 0
 	bitIndex = 0
+	return nil
 }
 
-func writeCodes(w *bufio.Writer, codes map[rune]string) {
+func writeCodes(w *bufio.Writer, codes map[rune]string) error {
 	sb := strings.Builder{}
 	for ch, code := range codes {
 		sb.WriteString(code)
@@ -247,14 +273,21 @@ func writeCodes(w *bufio.Writer, codes map[rune]string) {
 	count := sb.Len()
 	bs := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bs, uint32(count))
-	w.Write(bs)
-	w.WriteString(sb.String())
+	_, err := w.Write(bs)
+	if err != nil {
+		return err
+	}
+	_, err = w.WriteString(sb.String())
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func count(compressParams CompressParams) counter.Counter {
+func count(compressParams CompressParams) (counter.Counter, error) {
 	f, err := os.Open(compressParams.FilePath)
 	if err != nil {
-		panic(err)
+		return counter.Counter{}, err
 	}
 	defer f.Close()
 	r := bufio.NewReader(f)
@@ -270,5 +303,5 @@ func count(compressParams CompressParams) counter.Counter {
 	}
 
 	c.TotalChars = charCounter
-	return c
+	return c, nil
 }
