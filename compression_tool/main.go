@@ -182,7 +182,7 @@ func writeToFile(compressParams CompressParams, codes map[rune]string, counter c
 	defer f.Close()
 	w := bufio.NewWriter(f)
 	writeCodes(w, codes)
-	chartCountBuffer := convertIntToBytes(counter.CharCount)
+	chartCountBuffer := convertIntToBytes(counter.TotalChars)
 	w.Write(chartCountBuffer)
 	writeContent(w, compressParams, codes)
 	w.Flush()
@@ -265,6 +265,6 @@ func count(compressParams CompressParams) counter.Counter {
 		charCounter++
 	}
 
-	c.CharCount = charCounter
+	c.TotalChars = charCounter
 	return c
 }
