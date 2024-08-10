@@ -33,7 +33,6 @@ func main() {
 		operation = Zip
 	}
 
-	fmt.Println("Operation: ", operation)
 	Process(CompressParams{FilePath: filePath, OutputPath: outputFileName, Operation: operation})
 }
 
