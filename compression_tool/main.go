@@ -7,17 +7,17 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"io/fs"
 	"os"
 	"strconv"
 	"strings"
 )
 
 func main() {
+
 	var inputFileName string
 	flag.StringVar(&inputFileName, "zip", "", "file to compress")
 	var outputFileName string
-	flag.StringVar(&outputFileName, "o", "", "output of the compressed file")
+	flag.StringVar(&outputFileName, "o", "", "output file of the operation")
 	var fileToDecompress string
 	flag.StringVar(&fileToDecompress, "unzip", "example.txt", "input file name")
 	flag.Parse()
@@ -63,20 +63,29 @@ func Process(compressParams CompressParams) error {
 		huffman.Traverse(root, "", codes)
 		writeToFile(compressParams, codes, c)
 	case Unzip:
-		decompress(compressParams.FilePath)
+		decompress(compressParams.FilePath, compressParams.OutputPath)
 	}
 	return nil
 }
 
-func decompress(filePath string) {
+func decompress(filePath string, outputFileName string) {
 	bits := ""
 	f, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
 	}
+	defer f.Close()
+
 	r := bufio.NewReader(f)
 
-	var outputTxtBuilder strings.Builder = strings.Builder{}
+	// Open the output file for writing
+	outputFile, err := os.Create(outputFileName)
+	if err != nil {
+		fmt.Println("Error creating output file:", err)
+		panic(err)
+	}
+	defer outputFile.Close()
+
 	headerLength := readNextInt(r)
 
 	headerBuffer := make([]byte, headerLength)
@@ -90,35 +99,51 @@ func decompress(filePath string) {
 		return
 	}
 
-	charCouting := 0
+	// Buffer to accumulate the decompressed data before writing it to the file
+	chunkSize := 1024
+	var chunkBuilder strings.Builder
+
+	charCounting := 0
 	for {
 		b, err := r.ReadByte()
 		if err != nil {
 			break
 		}
-		if charCouting == totalChars {
+		if charCounting == totalChars {
 			break
 		}
 
 		for i := 0; i < 8; i++ {
 			bit := (b >> uint(7-i)) & 1
-			bits = bits + fmt.Sprintf("%d", bit)
+			bits += fmt.Sprintf("%d", bit)
 			if ch, ok := header[bits]; ok {
-				outputTxtBuilder.WriteRune(ch)
+				chunkBuilder.WriteRune(ch)
 				bits = ""
-				charCouting++
+				charCounting++
+
+				// Write to the file when the chunk reaches the specified size
+				if chunkBuilder.Len() >= chunkSize {
+					_, err := outputFile.WriteString(chunkBuilder.String())
+					if err != nil {
+						fmt.Println("Error writing to file:", err)
+						panic(err)
+					}
+					chunkBuilder.Reset()
+				}
 			}
 		}
 	}
-	outputFileName := "output2.txt"
-	outputTxt := outputTxtBuilder.String()
-	e := os.WriteFile(outputFileName, []byte(outputTxt), fs.FileMode(0644))
 
-	if e != nil {
-		fmt.Println("Error writing to file: ", e)
-		panic(e)
+	// Write any remaining data in the chunk buffer to the file
+	if chunkBuilder.Len() > 0 {
+		_, err := outputFile.WriteString(chunkBuilder.String())
+		if err != nil {
+			fmt.Println("Error writing to file:", err)
+			panic(err)
+		}
 	}
-	fmt.Println("Output written to file: ", outputFileName)
+
+	fmt.Println("Decompression complete. Output written to", outputFileName)
 }
 
 func readNextInt(r *bufio.Reader) int {
@@ -157,13 +182,13 @@ func writeToFile(compressParams CompressParams, codes map[rune]string, counter c
 	defer f.Close()
 	w := bufio.NewWriter(f)
 	writeCodes(w, codes)
-	chartCountBuffer := ConvertIntToBytes(counter.CharCount)
+	chartCountBuffer := convertIntToBytes(counter.CharCount)
 	w.Write(chartCountBuffer)
 	writeContent(w, compressParams, codes)
 	w.Flush()
 }
 
-func ConvertIntToBytes(input int) []byte {
+func convertIntToBytes(input int) []byte {
 	sb := make([]byte, 4)
 	binary.LittleEndian.PutUint32(sb, uint32(input))
 	return sb
