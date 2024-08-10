@@ -57,15 +57,19 @@ const (
 func Process(compressParams CompressParams) error {
 	switch compressParams.Operation {
 	case Zip:
-		c := count(compressParams)
-		root := huffman.BuildTree(c.Counter)
-		codes := make(map[rune]string)
-		huffman.Traverse(root, "", codes)
-		writeToFile(compressParams, codes, c)
+		compress(compressParams)
 	case Unzip:
 		decompress(compressParams.FilePath, compressParams.OutputPath)
 	}
 	return nil
+}
+
+func compress(compressParams CompressParams) {
+	c := count(compressParams)
+	root := huffman.BuildTree(c.Counter)
+	codes := make(map[rune]string)
+	huffman.Traverse(root, "", codes)
+	writeToFile(compressParams, codes, c)
 }
 
 func decompress(filePath string, outputFileName string) {
