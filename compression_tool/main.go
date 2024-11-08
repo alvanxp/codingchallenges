@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 func main() {
@@ -206,7 +208,11 @@ func writeToFile(compressParams CompressParams, codes map[rune]string, counter c
 	if err != nil {
 		return err
 	}
-	err = writeContent(w, compressParams, codes)
+	fmt.Printf("TotalCharts %d\n", counter.TotalChars)
+
+	step := float64(counter.TotalChars) * 0.01
+	fmt.Printf("##### Step %v\n", step)
+	err = writeContent(w, compressParams, codes, uint32(counter.TotalChars))
 	if err != nil {
 		return err
 	}
@@ -223,21 +229,28 @@ func convertIntToBytes(input int) []byte {
 	return sb
 }
 
-func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune]string) error {
+func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune]string, totalChars uint32) error {
 
+	var percentageProgress float64 = 0.0
 	f, err := os.Open(compressParams.FilePath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 	r := bufio.NewReader(f)
-
+	bar := progressbar.Default(100)
 	byteBuffer := byte(0)
 	bitIndex := 0
+	var progressStep float64 = (100 / float64(totalChars)) * 1
 	for {
 		rc, _, err := r.ReadRune()
+
+		// fmt.Println("Progress: ", percentageProgress)
+		percentageProgress += progressStep
+		bar.Add(1)
 		if err != nil {
 			break
+
 		}
 		for _, c := range codes[rc] {
 
@@ -259,6 +272,7 @@ func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune
 	w.WriteByte(byteBuffer)
 	byteBuffer = 0
 	bitIndex = 0
+	// fmt.Println("Total chars", totalChars)
 	return nil
 }
 
