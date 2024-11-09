@@ -208,10 +208,7 @@ func writeToFile(compressParams CompressParams, codes map[rune]string, counter c
 	if err != nil {
 		return err
 	}
-	fmt.Printf("TotalCharts %d\n", counter.TotalChars)
 
-	step := float64(counter.TotalChars) * 0.01
-	fmt.Printf("##### Step %v\n", step)
 	err = writeContent(w, compressParams, codes, uint32(counter.TotalChars))
 	if err != nil {
 		return err
@@ -238,7 +235,7 @@ func writeContent(w *bufio.Writer, compressParams CompressParams, codes map[rune
 	}
 	defer f.Close()
 	r := bufio.NewReader(f)
-	bar := progressbar.Default(100)
+	bar := progressbar.Default(int64(totalChars), "Compressing")
 	byteBuffer := byte(0)
 	bitIndex := 0
 	var progressStep float64 = (100 / float64(totalChars)) * 1
